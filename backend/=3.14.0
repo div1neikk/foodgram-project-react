@@ -1,0 +1,10 @@
+Collecting djangorestframework
+  Downloading djangorestframework-3.15.1-py3-none-any.whl (1.1 MB)
+     ---------------------------------------- 1.1/1.1 MB 2.6 MB/s eta 0:00:00
+Requirement already satisfied: django>=3.0 in d:\pythom\dev\foodgram-project-react\venv\lib\site-packages (from djangorestframework) (4.2.3)
+Requirement already satisfied: asgiref<4,>=3.6.0 in d:\pythom\dev\foodgram-project-react\venv\lib\site-packages (from django>=3.0->djangorestframework) (3.8.1)
+Requirement already satisfied: sqlparse>=0.3.1 in d:\pythom\dev\foodgram-project-react\venv\lib\site-packages (from django>=3.0->djangorestframework) (0.5.0)
+Requirement already satisfied: tzdata in d:\pythom\dev\foodgram-project-react\venv\lib\site-packages (from django>=3.0->djangorestframework) (2024.1)
+Requirement already satisfied: typing-extensions>=4 in d:\pythom\dev\foodgram-project-react\venv\lib\site-packages (from asgiref<4,>=3.6.0->django>=3.0->djangorestframework) (4.11.0)
+Installing collected packages: djangorestframework
+Successfully installed djangorestframework-3.15.1
