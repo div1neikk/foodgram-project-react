@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-llmvkb+=9xkc7j4_ynci9l=@w1#)@mtv5dmb9c$j!fe$fnvcdu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('HOSTS', default='').split()
 
 
 # Application definition
@@ -90,11 +90,15 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3'
-                }
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'postgres'),
+            'USER': os.getenv('POSTGRES_USER', 'postgres'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'password'),
+            'HOST': os.getenv('DB_HOST', '172.17.0.2'),
+            'PORT': os.getenv('DB_PORT', 5432),
         }
+    }
 
 
 # Password validation
