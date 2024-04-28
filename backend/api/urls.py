@@ -9,6 +9,7 @@ from .views import (
     TagViewSet,
     UserViewSetWithActions,
 )
+
 app_name = 'api'
 
 router = DefaultRouter()
