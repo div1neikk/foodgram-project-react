@@ -47,45 +47,44 @@ class Recipe(NameFieldBaseModel):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        verbose_name='Автор ')
-    name = models.CharField(
-        'Название рецепта',
-        max_length=255)
+        verbose_name='Автор рецепта',
+    )
     image = models.ImageField(
         upload_to='images/',
         null=False,
         blank=False,
         verbose_name='Изображение',
     )
-    text = models.TextField(
-        'Описание рецепта')
+    text = models.TextField('Описание',)
     ingredients = models.ManyToManyField(
         Ingredient,
         through='IngredientRecipe',
-        verbose_name='Ингредиенты'
+        verbose_name='Ингредиенты',
     )
     tags = models.ManyToManyField(
         Tag,
-        verbose_name='Тэги',)
+        verbose_name='Тэги',
+    )
     cooking_time = models.PositiveSmallIntegerField(
         blank=False,
-        verbose_name='Время приготовления в минутах',
-        validators=[validators.MinValueValidator(
-            1, message='Мин. время приготовления 1 минута'), ])
+        verbose_name='Время приготовления',
+    )
     pub_date = models.DateTimeField(
         'Дата публикации',
-        auto_now_add=True)
+        auto_now_add=True
+    )
     is_favorited = models.ManyToManyField(
         User,
         through='UsersRecipesFavorite',
         related_name='favorite_recipes',
-        verbose_name='Избранные рецепты'
+        verbose_name='Кому понравился рецепт'
     )
+
     is_in_shopping_cart = models.ManyToManyField(
         User,
         through='ShoppingCart',
         related_name='buy_it',
-        verbose_name='Ингредиент в корзине',
+        verbose_name='Кто добавил в список покупок',
     )
 
     class Meta:
@@ -116,7 +115,7 @@ class IngredientRecipe(models.Model):
     default_related_name = 'ingredient_recipe'
 
 
-class ShoppingCart(models.Model):
+class AbstractUserRecipeModel(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -128,9 +127,18 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Покупка'
-        verbose_name_plural = 'Покупки'
-        ordering = ['-id']
+        abstract = True
+
+
+class ShoppingCart(AbstractUserRecipeModel):
+
+    class Meta:
+        verbose_name = 'Корзина покупок'
+        verbose_name_plural = verbose_name
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'recipe'),
+                                    name='user_recipe_shopping_cart_unique'),
+        )
 
 
 class UsersRecipesFavorite(models.Model):
@@ -149,3 +157,7 @@ class UsersRecipesFavorite(models.Model):
     class Meta:
         verbose_name = 'Любимый рецепт пользователя'
         verbose_name_plural = 'любимые рецепты пользователя'
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'recipe'),
+                                    name='user_recipe_favorite_unique'),
+        )

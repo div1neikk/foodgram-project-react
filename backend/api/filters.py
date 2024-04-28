@@ -1,29 +1,36 @@
-import django_filters as filters
+import django_filters
 
-from users.models import CustomUser
 from recipes.models import Ingredient, Recipe
 
 
-class RecipeFilter(filters.FilterSet):
-    author = filters.ModelChoiceFilter(
-        queryset=CustomUser.objects.all())
-    is_in_shopping_cart = filters.BooleanFilter(
-        widget=filters.widgets.BooleanWidget(),
-        label='В корзине.')
-    is_favorited = filters.BooleanFilter(
-        widget=filters.widgets.BooleanWidget(),
-        label='В избранных.')
-    tags = filters.AllValuesMultipleFilter(
-        field_name='tags__slug',
-        label='Ссылка')
+class RecipeFilter(django_filters.FilterSet):
+    author = django_filters.NumberFilter(field_name='author__id')
+    tags = django_filters.CharFilter(
+        method='filter_tags')
+    is_in_shopping_cart = django_filters.NumberFilter(
+        method='filter_user_in_queryset')
+    is_favorited = django_filters.NumberFilter(
+        method='filter_user_in_queryset')
 
     class Meta:
         model = Recipe
-        fields = ['is_favorited', 'is_in_shopping_cart', 'author', 'tags']
+        fields = ('author', 'tags', 'is_in_shopping_cart', 'is_favorited',)
+
+    def filter_user_in_queryset(self, queryset, name, value):
+        user = self.request.user
+        if value and user.is_authenticated:
+            data = {name: user}
+            queryset = queryset.filter(**data)
+        return queryset
+
+    def filter_tags(self, queryset, name, value):
+        tags = self.request.query_params.getlist('tags')
+        queryset = queryset.filter(tags__slug__in=tags).distinct()
+        return queryset
 
 
-class IngredientFilter(filters.FilterSet):
-    name = filters.CharFilter(
+class IngredientFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(
         field_name='name', lookup_expr='icontains'
     )
 

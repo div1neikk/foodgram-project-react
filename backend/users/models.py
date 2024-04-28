@@ -8,35 +8,9 @@ class CustomUser(AbstractUser):
         'Адрес электронной почты',
         unique=True
     )
-    groups = models.ManyToManyField(
-        'auth.Group',
-        verbose_name='Группы',
-        blank=True,
-        related_name='custom_users'
-    )
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        verbose_name='Разрешения пользователя',
-        blank=True,
-        related_name='custom_users_permissions'
-    )
-    first_name = models.CharField(
-        'Имя',
-        max_length=150)
-    last_name = models.CharField(
-        'Фамилия',
-        max_length=150)
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
-
-    class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
-        ordering = ('id',)
-
-    def __str__(self):
-        return self.email
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
 
 class Subscription(models.Model):
@@ -61,7 +35,7 @@ class Subscription(models.Model):
     def __str__(self):
         return f'{self.subscriber} is subscribed to {self.user}'
 
-    def clean_recipients(self):
+    def clean(self):
         if self.user == self.subscriber:
             raise ValidationError(
                 'Вы не можете подписаться на самого себя'

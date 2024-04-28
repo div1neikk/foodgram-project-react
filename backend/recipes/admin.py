@@ -14,10 +14,10 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Ингредиенты')
     def display_ingredients(self, obj):
         ingredients_list = []
-        for item in obj.ingredientrecipe_set.all():
+        for ingr in obj.ingredientrecipe_set.all():
             ingredients_list.append(
-                f'{item.ingredient.name} - '
-                f'{item.amount} {item.ingredient.measurement_unit}'
+                f'{ingr.ingredient.name} - '
+                f'{ingr.amount} {ingr.ingredient.measurement_unit}'
             )
         return ', '.join(ingredients_list)
 
@@ -39,35 +39,3 @@ class IngredientAdmin(admin.ModelAdmin):
 @admin.register(models.Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'color',)
-
-
-@admin.register(models.ShoppingCart)
-class SoppingCartAdmin(admin.ModelAdmin):
-    list_display = (
-        'id', 'user', 'get_recipe', 'get_count')
-
-    @admin.display(description='Рецепты')
-    def get_recipe(self, obj):
-        return [
-            f'{item["name"]} ' for item in obj.recipe.values('name')[:5]]
-
-    @admin.display(description='В избранных')
-    def get_count(self, obj):
-        return obj.recipe.count()
-
-
-@admin.register(models.UsersRecipesFavorite)
-class FavoriteRecipeAdmin(admin.ModelAdmin):
-    list_display = (
-        'id', 'user', 'get_recipe', 'get_count')
-
-    @admin.display(
-        description='Рецепты')
-    def get_recipe(self, obj):
-        return [
-            f'{item["name"]} ' for item in obj.recipe.values('name')[:5]]
-
-    @admin.display(
-        description='В избранных')
-    def get_count(self, obj):
-        return obj.recipe.count()

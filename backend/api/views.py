@@ -2,13 +2,16 @@ from django_filters import rest_framework as filters
 from rest_framework import exceptions, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models.aggregates import Count
+from django.db.models.expressions import Exists, OuterRef, Value
 from django.db.models import Sum
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 
-from api.permissions import AuthorAndAdminOnly
-from api.serializers import (IngredientSerializer,
-                             RecipeListForUserSerializer,
-                             RecipeSerializer, TagSerializer)
+from .permissions import AuthorAndAdminOnly
+from .serializers import (IngredientSerializer,
+                          RecipeListForUserSerializer,
+                          RecipeSerializer, TagSerializer)
 from recipes.models import (Ingredient, IngredientRecipe, Recipe, ShoppingCart,
                             Tag, UsersRecipesFavorite)
 
@@ -22,6 +25,15 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import Subscription
 
 from .services import create_pdf
+
+
+def _get_obj_or_400(klass, **kwargs):
+    if hasattr(klass, "_default_manager"):
+        queryset = klass._default_manager.all()
+    try:
+        return queryset.get(**kwargs)
+    except Exception:
+        raise exceptions.ValidationError(detail=f'{klass.__name__} not exist')
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -46,7 +58,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(["get"],
             permission_classes=(permissions.IsAuthenticated,),
             detail=False)
-    def download_to_shopping_cart(self, request, *args, **kwargs):
+    def download_shopping_cart(self, request, *args, **kwargs):
         recipes_in_shopping_cart = IngredientRecipe.objects.filter(
             recipe__is_in_shopping_cart=request.user
         ).values('ingredient__name',
@@ -55,7 +67,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         file = create_pdf(recipes_in_shopping_cart)
         return FileResponse(
             file,
-            filename='shopping_cart_with_recipe.pdf',
+            filename='shopping_cart.pdf',
             status=status.HTTP_200_OK,
             as_attachment=True, )
 
@@ -76,11 +88,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def __base_action_method(
             self, klass, request, *args, **kwargs
     ) -> Response:
+        """Return Response depending on the state of the objects."""
         method = request.method
         user = request.user
         if method == 'POST':
-            recipe = Recipe.objects.all().values('id', 'name', 'image', 'cooking_time')
-            serializer = RecipeListForUserSerializer(recipe, many=True)
+            recipe = self._get_recipe_or_400()
+            serializer = RecipeListForUserSerializer(recipe)
             _, created = klass.objects.get_or_create(user=user, recipe=recipe)
             if created:
                 return Response(
@@ -93,7 +106,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
         if method == 'DELETE':
             recipe = self.get_object()
-            favorite = self._get_obj_or_400(klass, user=user, recipe=recipe)
+            favorite = _get_obj_or_400(klass, user=user, recipe=recipe)
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -153,7 +166,7 @@ class UserViewSetWithActions(UserViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'POST':
             if sub_exist:
-                return Response('Subscription exist',
+                return Response('Вы уже подписаны',
                                 status=status.HTTP_400_BAD_REQUEST)
             Subscription.objects.create(user=user, subscriber=subscriber)
             serializer = UserSerializerWithRecipesList(
@@ -162,7 +175,7 @@ class UserViewSetWithActions(UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if not sub_exist:
-                return Response('Subscription not exist',
+                return Response('Вы не подписаны',
                                 status=status.HTTP_400_BAD_REQUEST)
             Subscription.objects.get(user=user, subscriber=subscriber).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
