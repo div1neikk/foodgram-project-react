@@ -1,7 +1,7 @@
+from drf_base64.fields import Base64ImageField
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers, validators
-from drf_base64.fields import Base64ImageField
 from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 
 from users.models import Subscription
