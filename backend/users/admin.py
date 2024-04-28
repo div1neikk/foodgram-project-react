@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model, models
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
 
 from .models import Subscription
 
 User = get_user_model()
+
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):

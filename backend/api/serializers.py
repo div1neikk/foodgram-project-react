@@ -1,10 +1,8 @@
-from drf_base64.fields import Base64ImageField
-
-from django.contrib.auth import get_user_model, authenticate
-from django.core.files.base import ContentFile
+from django.contrib.auth import get_user_model
 
 from rest_framework import serializers, validators
 
+from drf_base64.fields import Base64ImageField
 
 from recipes.models import Ingredient, IngredientRecipe, Tag, Recipe
 from users.models import Subscription

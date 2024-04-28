@@ -14,4 +14,3 @@ class Command(BaseCommand):
         ]
         Tag.objects.bulk_create(Tag(**tag) for tag in data)
         self.stdout.write(self.style.SUCCESS('Все тэги загружены!'))
-

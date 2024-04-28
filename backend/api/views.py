@@ -1,30 +1,40 @@
-from django_filters import rest_framework as filters
-from rest_framework import exceptions, mixins, permissions, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db.models.aggregates import Count
-from django.db.models.expressions import Exists, OuterRef, Value
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
-
-from .permissions import AuthorAndAdminOnly
-from .serializers import (IngredientSerializer,
-                          RecipeListForUserSerializer,
-                          RecipeSerializer, TagSerializer)
-from recipes.models import (Ingredient, IngredientRecipe, Recipe, ShoppingCart,
-                            Tag, UsersRecipesFavorite)
+from django_filters import rest_framework as filters
+from rest_framework import (
+    exceptions,
+    mixins,
+    permissions,
+    status,
+    viewsets,
+)
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import LimitPageNumberPagination
-from .serializers import UserSerializerWithRecipesList, SubscriptionSerializer
+from .permissions import AuthorAndAdminOnly
+from .serializers import (
+    IngredientSerializer,
+    RecipeListForUserSerializer,
+    RecipeSerializer,
+    TagSerializer,
+    SubscriptionSerializer,
+    UserSerializerWithRecipesList,
+)
+from .services import create_pdf
+from recipes.models import (
+    Ingredient,
+    IngredientRecipe,
+    Recipe,
+    ShoppingCart,
+    Tag,
+    UsersRecipesFavorite,
+)
+from users.models import Subscription
 
 from djoser.views import UserViewSet
 from rest_framework.permissions import IsAuthenticated
-
-from users.models import Subscription
-
-from .services import create_pdf
 
 
 def _get_obj_or_400(klass, **kwargs):
