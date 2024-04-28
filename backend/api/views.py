@@ -1,40 +1,29 @@
+from djoser.views import UserViewSet
 from django.db.models import Sum
 from django.http import FileResponse
 from django_filters import rest_framework as filters
-from rest_framework import (
-    exceptions,
-    mixins,
-    permissions,
-    status,
-    viewsets,
-)
+from rest_framework import exceptions, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
+from .permissions import AuthorAndAdminOnly
+from .serializers import (IngredientSerializer,
+                          RecipeListForUserSerializer,
+                          RecipeSerializer,
+                          TagSerializer,
+                          SubscriptionSerializer,
+                          UserSerializerWithRecipesList,
+                          )
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import LimitPageNumberPagination
-from .permissions import AuthorAndAdminOnly
-from .serializers import (
-    IngredientSerializer,
-    RecipeListForUserSerializer,
-    RecipeSerializer,
-    TagSerializer,
-    SubscriptionSerializer,
-    UserSerializerWithRecipesList,
-)
 from .services import create_pdf
-from recipes.models import (
-    Ingredient,
-    IngredientRecipe,
-    Recipe,
-    ShoppingCart,
-    Tag,
-    UsersRecipesFavorite,
-)
 from users.models import Subscription
-
-from djoser.views import UserViewSet
-from rest_framework.permissions import IsAuthenticated
+from recipes.models import (Ingredient, IngredientRecipe, Recipe,
+                            ShoppingCart,
+                            Tag,
+                            UsersRecipesFavorite,
+                            )
 
 
 def _get_obj_or_400(klass, **kwargs):
