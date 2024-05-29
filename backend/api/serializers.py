@@ -239,38 +239,59 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             ]
         )
 
-    def validate(self, data):
-        ingredients = data.get('ingredients', [])
-        tags = data.get('tags', [])
+    class RecipeCreateSerializer(serializers.Serializer):
+        def validate(self, data):
+            ingredients = data.get('ingredients', [])
+            tags = data.get('tags', [])
 
-        if not tags:
-            raise serializers.ValidationError('Добавьте тег')
-        if not ingredients:
-            raise serializers.ValidationError('Добавьте ингридиент')
-        if len(tags) == 0:
-            raise serializers.ValidationError(
-                'Поле "tags" не должно быть пустым.'
+            self.validate_tags(tags)
+            self.validate_ingredients(ingredients)
+            self.validate_cooking_time(data.get('cooking_time', 0))
+
+            return data
+
+        def validate_tags(self, tags):
+            if not tags:
+                raise serializers.ValidationError('Добавьте тег')
+            if len(tags) == 0:
+                raise serializers.ValidationError(
+                    'Поле "tags" не должно быть пустым.'
+                )
+
+            tag_ids = [tag.id for tag in tags]
+            if len(tag_ids) != len(set(tag_ids)):
+                raise serializers.ValidationError(
+                    'Теги не должны повторяться.'
+                )
+
+        def validate_ingredients(self, ingredients):
+            if not ingredients:
+                raise serializers.ValidationError(
+                    'Добавьте ингридиент'
+                )
+
+            ingredient_ids = [ingredient.get(
+                'id'
+            ) for ingredient in ingredients]
+            if len(ingredient_ids) != len(set(ingredient_ids)):
+                raise serializers.ValidationError(
+                    'Ингредиенты не должны повторяться.'
+                )
+
+            existing_ids = set(Ingredient.objects.values_list(
+                'id', flat=True)
             )
+            for ingredient_data in ingredients:
+                self.validate_ingredient(ingredient_data,
+                                         existing_ids)
 
-        tag_ids = [tag.id for tag in tags]
-        if len(tag_ids) != len(set(tag_ids)):
-            raise serializers.ValidationError('Теги не должны повторяться.')
-
-        ingredient_ids = [ingredient.get('id') for ingredient in ingredients]
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                'Ингредиенты не должны повторяться.'
-            )
-
-        existing_ids = set(Ingredient.objects.values_list(
-            'id', flat=True)
-        )
-        for ingredient_data in ingredients:
+        def validate_ingredient(self, ingredient_data, existing_ids):
             ing_id = ingredient_data.get('id')
             if ing_id not in existing_ids:
                 raise serializers.ValidationError(
                     f'Ингредиент с id {ing_id} не существует.'
                 )
+
             amount = ingredient_data.get('amount')
             if amount is None:
                 raise serializers.ValidationError(
@@ -287,12 +308,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                     'Количество ингредиента должно быть больше 0.'
                 )
 
-        if data.get('cooking_time', 0) < 1:
-            raise serializers.ValidationError(
-                'Время готовки должно быть больше 1 минуты.'
-            )
-
-        return data
+        def validate_cooking_time(self, cooking_time):
+            if cooking_time < 1:
+                raise serializers.ValidationError(
+                    'Время готовки должно быть больше 1 минуты.'
+                )
 
     @transaction.atomic
     def create(self, validated_data):
