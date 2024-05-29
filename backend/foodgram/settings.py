@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'key')
 
 DEBUG = os.getenv('DEBUG', False) == 'True'
 
-ALLOWED_HOSTS = os.getenv('HOSTS', default='').split()
+ALLOWED_HOSTS = ['foodgram-divine.hopto.org', 'localhost', '127.0.0.1']
 
 
 # Application definition
