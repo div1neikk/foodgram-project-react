@@ -42,7 +42,8 @@ class UserValidateViewSet(UserViewSet):
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
 
-    @action(['POST', 'DELETE'], detail=True)
+    @action(['POST', 'DELETE'],
+            detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
         if request.user == user_obj:

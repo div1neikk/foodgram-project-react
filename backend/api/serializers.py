@@ -109,6 +109,19 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             subscriber=user
         ).exists()
 
+    def validate(self, data):
+        user = self.context['request'].user
+        user_obj = data['user']
+        if user == user_obj:
+            raise serializers.ValidationError(
+                "Нельзя подписываться на самого себя"
+            )
+        if Subscription.objects.filter(
+                user=user_obj, subscriber=user
+        ).exists():
+            raise serializers.ValidationError('Вы уже подписаны!')
+        return data
+
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
