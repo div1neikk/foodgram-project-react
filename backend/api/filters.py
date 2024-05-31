@@ -5,11 +5,11 @@ from recipes.models import Ingredient, Recipe
 
 class RecipeFilter(django_filters.FilterSet):
     author = django_filters.NumberFilter(field_name='author__id')
-    tags = django_filters.CharFilter(
+    tags = django_filters.ModelMultipleChoiceFilter(
         method='filter_tags')
-    is_in_shopping_cart = django_filters.NumberFilter(
+    is_in_shopping_cart = django_filters.BooleanFilter(
         method='filter_user_in_queryset')
-    is_favorited = django_filters.NumberFilter(
+    is_favorited = django_filters.BooleanFilter(
         method='filter_user_in_queryset')
 
     class Meta:
@@ -23,9 +23,8 @@ class RecipeFilter(django_filters.FilterSet):
             queryset = queryset.filter(**data)
         return queryset
 
-    def filter_tags(self, queryset, name, value):
-        tags = self.request.query_params.getlist('tags')
-        queryset = queryset.filter(tags__slug__in=tags).distinct()
+    def filter_tags(self, queryset, value):
+        queryset = queryset.filter(tags__slug__in=value)
         return queryset
 
 

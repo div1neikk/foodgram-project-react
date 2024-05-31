@@ -1,14 +1,16 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from django.http import HttpResponse
+from django.http import FileResponse
+from io import BytesIO
+from .models import RecipeIngredient
 
 
-def create_pdf(data_list: list[str]):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] =\
-        'attachment; filename="shopping_cart.pdf"'
-
-    p = canvas.Canvas(response, pagesize=letter)
+def create_pdf(user):
+    data_list = RecipeIngredient.objects.filter(recipe__author=user).values(
+        'ingredient__name', 'ingredient__measurement_unit', 'amount'
+    )
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
     p.drawString(100, 750, "Shopping Cart Ingredients:")
 
     y = 730
@@ -20,4 +22,9 @@ def create_pdf(data_list: list[str]):
         y -= 20
 
     p.save()
-    return response
+    buffer.seek(0)
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename='shopping_cart.pdf'
+    )

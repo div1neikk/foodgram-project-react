@@ -1,13 +1,12 @@
-from django.db.models import Sum
 from django.http import FileResponse
-from rest_framework import viewsets, mixins, status, permissions, exceptions
+from rest_framework import viewsets, mixins, status, permissions
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 from django_filters import rest_framework as filters
 from django.shortcuts import get_object_or_404
-from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Exists, OuterRef
 from djoser.views import UserViewSet
-from recipes.models import (Recipe, Ingredient, Tag, RecipeIngredient,
+from recipes.models import (Recipe, Ingredient, Tag,
                             Favorite, ShoppingCart)
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -46,39 +45,38 @@ class UserValidateViewSet(UserViewSet):
     @action(['POST', 'DELETE'], detail=True)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        if request.method == 'POST':
-            if request.user == user_obj:
-                return Response("Нельзя подписываться на самого себя",
-                                status=status.HTTP_400_BAD_REQUEST)
+        if request.user == user_obj:
+            return Response("Нельзя подписываться на самого себя",
+                            status=status.HTTP_400_BAD_REQUEST)
 
-            sub_exist = Subscription.objects.filter(
-                user=user_obj, subscriber=request.user
-            ).exists()
+        subscription, created = Subscription.objects.get_or_create(
+            user=user_obj,
+            subscriber=request.user
+        )
 
-            if sub_exist:
-                return Response('Вы уже подписаны!',
-                                status=status.HTTP_400_BAD_REQUEST)
+        if not created:
+            return Response('Вы уже подписаны!',
+                            status=status.HTTP_400_BAD_REQUEST)
 
-            subscription = Subscription.objects.create(
+        serializer = SubscriptionSerializer(
+            subscription, context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request):
+        user_obj = self.get_object()
+        try:
+            subscription = Subscription.objects.get(
                 user=user_obj,
                 subscriber=request.user
             )
-            serializer = SubscriptionSerializer(
-                subscription, context={'request': request}
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Subscription.DoesNotExist:
+            return Response("Вы не подписаны на этого пользователя",
 
-        if request.method == 'DELETE':
-            try:
-                subscription = Subscription.objects.get(
-                    user=user_obj,
-                    subscriber=request.user
-                )
-                subscription.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except ObjectDoesNotExist:
-                return Response("Вы не подписаны на этого пользователя",
-                                status=status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
 
     @action(['get'], detail=False, permission_classes=(
             IsAuthenticatedOrReadOnly,)
@@ -138,15 +136,41 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Recipe.objects.all()
+
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                )
+            )
+        else:
+            queryset = queryset.annotate(
+                is_favorited=Exists(Favorite.objects.none()),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.none()
+                )
+            )
+
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def get_obj_or_404(self):
-        try:
-            recipe = self.get_object()
-            return recipe
-        except Exception:
-            raise exceptions.ValidationError(detail='Рецепта нет')
+    def get_obj_or_404(self, pk):
+        serializer = self.get_serializer()
+        return serializer.get_object_or_raise_404(pk)
 
     def create_obj(self, request, obj_class):
         recipe = self.get_obj_or_404()
@@ -189,19 +213,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=(permissions.IsAuthenticated,),
             detail=False)
     def download_shopping_cart(self, request, *args, **kwargs):
-        recipes_in_shopping_cart = RecipeIngredient.objects.filter(
-            recipe__shoppingcart__user=request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit',
-        ).annotate(amount=Sum('amount')).order_by('ingredient__name')
-        file = create_pdf(recipes_in_shopping_cart)
-        return FileResponse(
-            file,
-            filename='shopping_cart.pdf',
-            status=status.HTTP_200_OK,
-            as_attachment=True,
-        )
+        user = get_object_or_404(User, username=request.user.username)
+        pdf_buffer = create_pdf(user)
+        return FileResponse(pdf_buffer, as_attachment=True,
+                            filename='shopping_cart.pdf')
 
     @action(methods=['POST', 'DELETE'],
             permission_classes=(permissions.IsAuthenticated,),
@@ -221,5 +236,5 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     def get_queryset(self):
-        user = self.request.user
-        return Subscription.objects.filter(subscriber=user)
+        subscriber = self.request.user
+        return Subscription.objects.filter(subscriber=subscriber)
