@@ -1,9 +1,38 @@
 from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import Exists, OuterRef
 from django.core.validators import MinValueValidator
 
 User = get_user_model()
+
+
+class RecipeQuerySet(models.QuerySet):
+    def with_user_annotations(self, user):
+        if user.is_authenticated:
+            return self.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                )
+            )
+        return self
+
+
+class RecipeManager(models.Manager):
+    def get_queryset(self):
+        return RecipeQuerySet(self.model, using=self._db)
+
+    def with_user_annotations(self, user):
+        return self.get_queryset().with_user_annotations(user)
 
 
 class Ingredient(models.Model):
@@ -90,6 +119,7 @@ class Recipe(models.Model):
         verbose_name='В корзине',
         related_name='shopping_cart_recipes'
     )
+    objects = RecipeManager()
 
     class Meta:
         ordering = ('-pub_date',)

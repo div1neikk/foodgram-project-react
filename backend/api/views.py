@@ -4,7 +4,6 @@ from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 from django_filters import rest_framework as filters
 from django.shortcuts import get_object_or_404
-from django.db.models import Exists, OuterRef
 from djoser.views import UserViewSet
 from recipes.models import (Recipe, Ingredient, Tag,
                             Favorite, ShoppingCart)
@@ -22,7 +21,7 @@ from .serializers import (
 
 from users.models import Subscription
 
-from .permissions import AuthorAndAdminOnly
+from .permissions import IsAuthorOrReadOnly
 
 from .pagination import LimitPageNumberPagination
 from .filters import IngredientFilter, RecipeFilter
@@ -35,7 +34,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-class UserValidateViewSet(UserViewSet):
+class UserViewSet(UserViewSet):
     @action(["get", "put", "patch", "delete"],
             detail=False,
             permission_classes=(IsAuthenticated,))
@@ -46,29 +45,23 @@ class UserValidateViewSet(UserViewSet):
             detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        if request.user == user_obj:
-            return Response("Нельзя подписываться на самого себя",
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        subscription, created = Subscription.objects.get_or_create(
-            user=user_obj,
-            subscriber=request.user
+        data = {
+            'user': user_obj.id,
+            'subscriber': request.user.id
+        }
+        serializer = self.get_serializer(
+            data=data,
+            context={'request': request}
         )
-
-        if not created:
-            return Response('Вы уже подписаны!',
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = SubscriptionSerializer(
-            subscription, context={'request': request}
-        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def delete_subscribe(self, request):
         user_obj = self.get_object()
         try:
-            subscription = Subscription.objects.get(
+            subscription = Subscription.objects.filter(
                 user=user_obj,
                 subscriber=request.user
             )
@@ -130,8 +123,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    permission_classes = [AuthorAndAdminOnly, ]
+    permission_classes = [IsAuthorOrReadOnly, ]
     serializer_class = RecipeCreateSerializer
     pagination_class = LimitPageNumberPagination
     filter_backends = (filters.DjangoFilterBackend,)
@@ -139,31 +131,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Recipe.objects.all()
-
-        if user.is_authenticated:
-            queryset = queryset.annotate(
-                is_favorited=Exists(
-                    Favorite.objects.filter(
-                        user=user,
-                        recipe=OuterRef('pk')
-                    )
-                ),
-                is_in_shopping_cart=Exists(
-                    ShoppingCart.objects.filter(
-                        user=user,
-                        recipe=OuterRef('pk')
-                    )
-                )
-            )
-        else:
-            queryset = queryset.annotate(
-                is_favorited=Exists(Favorite.objects.none()),
-                is_in_shopping_cart=Exists(
-                    ShoppingCart.objects.none()
-                )
-            )
-
+        queryset = Recipe.objects.with_user_annotations(user)
+        queryset = queryset.select_related('author').prefetch_related(
+            'ingredients__ingredient', 'tags'
+        )
         return queryset
 
     def perform_create(self, serializer):

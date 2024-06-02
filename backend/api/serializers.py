@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from djoser.serializers import \
-    UserCreateSerializer as DjoserUserCreateSerializer
+from djoser.serializers import (
+    UserCreateSerializer as
+    DjoserUserCreateSerializer
+)
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from drf_base64.fields import Base64ImageField
 from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
@@ -171,14 +173,18 @@ class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(required=False, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     image = Base64ImageField()
-    ingredients = serializers.SerializerMethodField()
+    ingredients = RecipeIngredientSerializer(
+        many=True, read_only=True
+    )
     is_favorited = serializers.BooleanField(
         source='is_favorited',
-        read_only=True
+        read_only=True,
+        default=False
     )
     is_in_shopping_cart = serializers.BooleanField(
         source='is_in_shopping_cart',
-        read_only=True
+        read_only=True,
+        default=False
     )
 
     class Meta:
@@ -256,14 +262,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 detail='Рецепта не существует'
             )
-
-    def validate(self, data):
-        ingredients = data.get('ingredients', [])
-        tags = data.get('tags', [])
-        self.validate_tags(tags)
-        self.validate_ingredients(ingredients)
-        self.validate_cooking_time(data.get('cooking_time', 0))
-        return data
 
     def validate_tags(self, tags):
         if not tags:
