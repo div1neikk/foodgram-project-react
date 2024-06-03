@@ -45,8 +45,9 @@ class UserViewSet(UserViewSet):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @subscribe.mapping.delete
-    def delete_subscribe(self, request, pk=None):
+    @action(detail=True, methods=['delete'],
+            permission_classes=[IsAuthenticated])
+    def unsubscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
         del_count, _ = Subscription.objects.filter(
             user=user_obj,
