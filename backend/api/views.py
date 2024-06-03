@@ -1,35 +1,23 @@
+from django.contrib.auth import get_user_model
 from django.http import FileResponse
-from rest_framework import viewsets, mixins, status, permissions
-from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
-                                        IsAuthenticated)
-from django_filters import rest_framework as filters
 from django.shortcuts import get_object_or_404
+from django_filters import rest_framework as filters
 from djoser.views import UserViewSet
-from recipes.models import (Recipe, Ingredient, Tag,
-                            Favorite, ShoppingCart)
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
-
-
-from .serializers import (
-    IngredientSerializer,
-    TagSerializer,
-    RecipeCreateSerializer,
-    SubscriptionSerializer,
-    RecipeSubscribeSerializer
-)
-
 from users.models import Subscription
 
-from .permissions import IsAuthorOrReadOnly
-
-from .pagination import LimitPageNumberPagination
 from .filters import IngredientFilter, RecipeFilter
+from .pagination import LimitPageNumberPagination
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (IngredientSerializer, RecipeCreateSerializer,
+                          RecipeSubscribeSerializer, SubscriptionSerializer,
+                          TagSerializer)
 from .services import create_pdf
-
-
-from django.contrib.auth import get_user_model
-
 
 User = get_user_model()
 
@@ -58,19 +46,18 @@ class UserViewSet(UserViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
-    def delete_subscribe(self, request):
+    def delete_subscribe(self, request, pk=None):
         user_obj = self.get_object()
-        try:
-            subscription = Subscription.objects.filter(
-                user=user_obj,
-                subscriber=request.user
-            )
-            subscription.delete()
+        del_count, _ = Subscription.objects.filter(
+            user=user_obj,
+            subscriber=request.user
+        ).delete()
+        if del_count:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except Subscription.DoesNotExist:
-            return Response("Вы не подписаны на этого пользователя",
-
-                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            "Вы не подписаны на этого пользователя",
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(['get'], detail=False, permission_classes=(
             IsAuthenticatedOrReadOnly,)
@@ -107,13 +94,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = IngredientFilter
     search_fields = ['name']
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.request.query_params.get('name', None)
-        if name is not None:
-            queryset = queryset.filter(name__istartswith=name)
-        return queryset
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -164,13 +144,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_obj(self, request, obj_class):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
-        try:
-            obj_instance = obj_class.objects.get(user=user, recipe=recipe)
-            obj_instance.delete()
+
+        _, deleted_count = obj_class.objects.filter(
+            user=user,
+            recipe=recipe
+        ).delete()
+
+        if deleted_count:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except obj_class.DoesNotExist:
-            return Response("Рецепта нет в избранных",
-                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'Рецепта нет в избранных'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(methods=['POST', 'DELETE'],
             permission_classes=(permissions.IsAuthenticated,),
