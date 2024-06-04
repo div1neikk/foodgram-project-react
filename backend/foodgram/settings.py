@@ -28,9 +28,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'key')
 
 DEBUG = os.getenv('DEBUG', False) == 'True'
 
-ALLOWED_HOSTS = ['foodgram-divine.hopto.org', 'localhost', '127.0.0.1']
-
-# указываю явно адресс т.к где то не правильно подгружает эти данные
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
 
 
 # Application definition
