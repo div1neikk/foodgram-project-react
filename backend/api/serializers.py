@@ -321,6 +321,15 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 'Количество ингредиента должно быть больше 0.'
             )
 
+    def validate_cooking_time(self, cooking_time):
+
+        if cooking_time < 1:
+            raise serializers.ValidationError(
+
+                'Время готовки должно быть больше 1 минуты.'
+
+            )
+
     @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients', [])
