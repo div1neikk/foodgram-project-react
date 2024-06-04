@@ -22,7 +22,7 @@ from .services import create_pdf
 User = get_user_model()
 
 
-class UserViewSet(UserViewSet):
+class UserActionViewSet(UserViewSet):
     @action(["get", "put", "patch", "delete"],
             detail=False,
             permission_classes=(IsAuthenticated,))

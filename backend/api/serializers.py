@@ -185,6 +185,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         source='is_in_shopping_cart',
         read_only=True,
         default=False
+
     )
 
     class Meta:
