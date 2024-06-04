@@ -264,6 +264,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 detail='Рецепта не существует'
             )
 
+    def validate(self, data):
+        self.validate_cooking_time(data.get('cooking_time', 1))
+
+        return data
+
     def validate_tags(self, tags):
         if not tags:
             raise serializers.ValidationError('Добавьте тег')
@@ -316,12 +321,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 'Количество ингредиента должно быть больше 0.'
             )
 
-    def validate_cooking_time(self, cooking_time):
-        if cooking_time < 1:
-            raise serializers.ValidationError(
-                'Время готовки должно быть больше 1 минуты.'
-            )
-
     @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients', [])
@@ -354,3 +353,4 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context={
             'request': self.context.get('request')
         }).data
+
