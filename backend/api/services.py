@@ -2,7 +2,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.http import FileResponse
 from io import BytesIO
-from .models import RecipeIngredient
+from recipes.models import RecipeIngredient
 
 
 def create_pdf(user):
