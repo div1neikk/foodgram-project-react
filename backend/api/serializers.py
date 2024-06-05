@@ -264,11 +264,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             )
 
     def validate(self, data):
-
-        ingredients = data.get('ingredients', [])
-        tags = data.get('tags', [])
-        self.validate_tags(tags)
-        self.validate_ingredients(ingredients)
         self.validate_cooking_time(data.get('cooking_time', 1))
         return data
 
