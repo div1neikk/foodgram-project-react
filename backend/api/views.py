@@ -33,22 +33,19 @@ class UserViewSet(UserViewSet):
             detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        if request.method == 'POST':
-            data = {
-                'user': user_obj.id,
-                'subscriber': request.user.id
-            }
-            serializer = self.get_serializer(
-                data=data,
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        elif request.method == 'DELETE':
-            return self.delete_subscribe(request)
+        data = {
+            'user': user_obj.id,
+            'subscriber': request.user.id
+        }
+        serializer = self.get_serializer(
+            data=data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @subscribe.mapping.delete
+    @action(methods=['DELETE'], detail=True)
     def delete_subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
         del_count, _ = Subscription.objects.filter(
