@@ -22,7 +22,7 @@ from .services import create_pdf
 User = get_user_model()
 
 
-class UserActionViewSet(UserViewSet):
+class UserViewSet(UserViewSet):
     @action(["get", "put", "patch", "delete"],
             detail=False,
             permission_classes=(IsAuthenticated,))
@@ -33,21 +33,23 @@ class UserActionViewSet(UserViewSet):
             detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        data = {
-            'user': user_obj.id,
-            'subscriber': request.user.id
-        }
-        serializer = self.get_serializer(
-            data=data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        if request.method == 'POST':
+            data = {
+                'user': user_obj.id,
+                'subscriber': request.user.id
+            }
+            serializer = self.get_serializer(
+                data=data,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        elif request.method == 'DELETE':
+            return self.delete_subscribe(request)
 
-    @action(detail=True, methods=['delete'],
-            permission_classes=[IsAuthenticated])
-    def unsubscribe(self, request, *args, **kwargs):
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
         del_count, _ = Subscription.objects.filter(
             user=user_obj,
@@ -55,10 +57,9 @@ class UserActionViewSet(UserViewSet):
         ).delete()
         if del_count:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(
-            "Вы не подписаны на этого пользователя",
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        else:
+            return Response("Вы не подписаны на этого пользователя",
+                            status=status.HTTP_400_BAD_REQUEST)
 
     @action(['get'], detail=False, permission_classes=(
             IsAuthenticatedOrReadOnly,)
@@ -145,18 +146,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_obj(self, request, obj_class):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
-
-        _, deleted_count = obj_class.objects.filter(
+        deleted_count, _ = obj_class.objects.filter(
             user=user,
             recipe=recipe
         ).delete()
-
         if deleted_count:
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(
-            {'error': 'Рецепта нет в избранных'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        else:
+            return Response(
+                "Рецепта нет в избранных",
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=['POST', 'DELETE'],
             permission_classes=(permissions.IsAuthenticated,),
