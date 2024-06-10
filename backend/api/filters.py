@@ -1,37 +1,41 @@
-import django_filters
+from django_filters import rest_framework as filters
 
-from recipes.models import Ingredient, Recipe
+from recipes.models import Ingredient, Tag
 
 
-class RecipeFilter(django_filters.FilterSet):
-    author = django_filters.NumberFilter(field_name='author__id')
-    tags = django_filters.ModelMultipleChoiceFilter(
-        method='filter_tags')
-    is_in_shopping_cart = django_filters.BooleanFilter(
-        method='filter_user_in_queryset')
-    is_favorited = django_filters.BooleanFilter(
-        method='filter_user_in_queryset')
+class RecipeFilter(filters.FilterSet):
+    author = filters.NumberFilter(field_name='author__id')
+    is_favorited = filters.BooleanFilter(
+        method='get_is_favorited',
+    )
+    is_in_shopping_cart = filters.BooleanFilter(
+        method='get_is_in_shopping_cart',
+    )
+    tags = filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        queryset=Tag.objects.all(),
+        to_field_name='slug',
+        method='filter_tags'
+    )
 
-    class Meta:
-        model = Recipe
-        fields = ('author', 'tags', 'is_in_shopping_cart', 'is_favorited',)
+    def get_is_favorited(self, queryset, filter_name, filter_value):
+        if filter_value:
+            return queryset.filter(is_favorited=self.request.user.id)
+        return queryset
 
-    def filter_user_in_queryset(self, queryset, name, value):
+    def get_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
         if value and user.is_authenticated:
-            data = {name: user}
-            queryset = queryset.filter(**data)
+            return queryset.filter(is_in_shopping_cart=user)
         return queryset
 
-    def filter_tags(self, queryset, value):
-        queryset = queryset.filter(tags__slug__in=value)
-        return queryset
+    def filter_tags(self, queryset, name, value):
+        return queryset.filter(tags__in=value).distinct()
 
 
-class IngredientFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(
-        field_name='name', lookup_expr='icontains'
-    )
+class IngredientFilter(filters.FilterSet):
+
+    name = filters.CharFilter(field_name='name', lookup_expr='startswith')
 
     class Meta:
         model = Ingredient

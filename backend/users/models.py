@@ -7,14 +7,19 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     email = models.EmailField(unique=True, verbose_name='Почта')
 
+    def __str__(self):
+        return self.username
+
 
 class Subscription(models.Model):
     subscriber = models.ForeignKey(
         User, on_delete=models.CASCADE,
+        null=True,
         related_name='subscriber',
     )
     user = models.ForeignKey(
         User,
+        null=True,
         on_delete=models.CASCADE,
         related_name='user',
         verbose_name='Пользователь'

@@ -11,19 +11,19 @@ class RecipeQuerySet(models.QuerySet):
     def with_user_annotations(self, user):
         if user.is_authenticated:
             return self.annotate(
-                is_favorited=Exists(
+                is_favorited_by_user=Exists(
                     Favorite.objects.filter(
                         user=user,
                         recipe=OuterRef('pk')
                     )
                 ),
-                is_in_shopping_cart=Exists(
+                is_in_shopping_cart_by_user=Exists(
                     ShoppingCart.objects.filter(
                         user=user,
                         recipe=OuterRef('pk')
                     )
                 )
-            )
+            ).prefetch_related('ingredients')
         return self
 
 
