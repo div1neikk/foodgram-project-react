@@ -15,6 +15,7 @@ class RecipeFilter(filters.FilterSet):
         field_name='tags__slug',
         queryset=Tag.objects.all(),
         to_field_name='slug',
+        method='filter_tags'
     )
 
     class Meta:
@@ -25,6 +26,11 @@ class RecipeFilter(filters.FilterSet):
             'author',
             'tags',
         )
+
+    def filter_tags(self, queryset, name, value):
+        tags = self.request.query_params.getlist('tags')
+        queryset = queryset.filter(tags__slug__in=tags).distinct()
+        return queryset
 
     def get_is_favorited(self, queryset, filter_name, filter_value):
         if filter_value:
