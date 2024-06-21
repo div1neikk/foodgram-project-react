@@ -118,19 +118,12 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
     permission_classes = [IsAuthorOrReadOnly, ]
     serializer_class = RecipeCreateSerializer
     pagination_class = LimitPageNumberPagination
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = RecipeFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = Recipe.objects.with_user_annotations(user)
-        queryset = queryset.select_related('author').prefetch_related(
-            'ingredients', 'tags'
-        )
-        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

@@ -94,8 +94,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         )
 
     def get_recipes(self, obj):
-        recipes = Recipe.objects.filter(author=obj.user)
-        return RecipeSerializer(recipes, many=True).data
+        request = self.context.get('request')
+        recipes = Recipe.objects.all()
+        limit = request.query_params.get('recipes_limit')
+        if limit:
+            recipes = recipes[:int(limit)]
+        serializer = RecipeSubscribeSerializer(recipes, many=True)
+        return serializer.data
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.user).count()
@@ -176,7 +181,6 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         recipe_ingredients = RecipeIngredient.objects.filter(recipe=obj)
-
         return [
             {
                 'id': recipe_ingredient.ingredient.id,
@@ -190,14 +194,20 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
+            return False
         return Favorite.objects.filter(
-            user=request.user, recipe=obj
+            recipe=obj,
+            user=request.user
         ).exists()
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
+            return False
         return ShoppingCart.objects.filter(
-            user=request.user, recipe=obj
+            recipe=obj,
+            user=request.user
         ).exists()
 
 

@@ -8,6 +8,7 @@ User = get_user_model()
 
 
 class RecipeQuerySet(models.QuerySet):
+
     def with_user_annotations(self, user):
         if user.is_authenticated:
             return self.annotate(
@@ -28,6 +29,7 @@ class RecipeQuerySet(models.QuerySet):
 
 
 class RecipeManager(models.Manager):
+
     def get_queryset(self):
         return RecipeQuerySet(self.model, using=self._db)
 
@@ -194,11 +196,13 @@ class ShoppingCart(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
+        related_name='shopping_cart'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
+        related_name='shopping_cart'
     )
 
     class Meta:
