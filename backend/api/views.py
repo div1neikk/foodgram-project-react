@@ -133,8 +133,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe = self.get_object()
             return recipe
         except Exception:
-            # Давай оставим эту проверку тут,
-            # я не смог разобраться как ее запихать в сериализатор
             raise exceptions.ValidationError(detail='Рецепта нет')
 
     def create_obj(self, request, obj_class):
