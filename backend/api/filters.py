@@ -27,11 +27,6 @@ class RecipeFilter(filters.FilterSet):
             'tags',
         )
 
-    def filter_tags(self, queryset, name, value):
-        tags = self.request.query_params.getlist('tags')
-        queryset = queryset.filter(tags__slug__in=tags).distinct()
-        return queryset
-
     def get_is_favorited(self, queryset, filter_name, filter_value):
         if filter_value:
             return queryset.filter(in_favorite__user=self.request.user.id)
