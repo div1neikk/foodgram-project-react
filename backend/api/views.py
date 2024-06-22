@@ -177,3 +177,19 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         user = self.request.user
         return Subscription.objects.filter(subscriber=user)
+
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        subscription = Subscription.objects.filter(
+            subscriber=user,
+            user__id=kwargs['pk']
+        ).first()
+
+        if subscription:
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                "Вы не подписаны на этого пользователя",
+                status=status.HTTP_400_BAD_REQUEST
+            )
