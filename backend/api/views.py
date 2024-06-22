@@ -67,33 +67,6 @@ class UserActionViewSet(UserViewSet):
                 return Response("Вы не подписаны на этого пользователя",
                                 status=status.HTTP_400_BAD_REQUEST)
 
-    @action(['get'], detail=False, permission_classes=(
-            IsAuthenticatedOrReadOnly,)
-            )
-    def subscriptions(self, request, *args, **kwargs):
-        user = request.user
-        subscriptions = Subscription.objects.filter(subscriber=user)
-
-        paginator = LimitPageNumberPagination()
-        paginated_subscriptions = paginator.paginate_queryset(
-            subscriptions, request
-        )
-
-        if paginated_subscriptions is not None:
-            serializer = SubscriptionSerializer(
-                paginated_subscriptions,
-                many=True,
-                context={'request': request}
-            )
-            return paginator.get_paginated_response(serializer.data)
-
-        serializer = SubscriptionSerializer(
-            subscriptions,
-            many=True,
-            context={'request': request}
-        )
-        return Response(serializer.data)
-
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
@@ -195,5 +168,13 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     def get_queryset(self):
-        subscriber = self.request.user
-        return Subscription.objects.filter(subscriber=subscriber)
+        user = self.request.user
+        queryset = Subscription.objects.filter(subscriber=user)
+        limit = self.request.query_params.get('limit', False)
+        if limit:
+            queryset = queryset[:int(limit)]
+        return queryset
+
+    def get_serializer_context(self):
+        context = self.request.query_params
+        return context
