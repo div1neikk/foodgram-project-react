@@ -78,6 +78,34 @@ class UserActionViewSet(UserViewSet):
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(['get'], detail=False, permission_classes=(
+            IsAuthenticatedOrReadOnly,)
+            )
+    def subscriptions(self, request, *args, **kwargs):
+        user = request.user
+        subscriptions = Subscription.objects.filter(subscriber=user)
+
+        paginator = LimitPageNumberPagination()
+        paginated_subscriptions = paginator.paginate_queryset(
+            subscriptions, request
+        )
+
+        if paginated_subscriptions is not None:
+            serializer = SubscriptionSerializer(
+                paginated_subscriptions,
+                many=True,
+                context={'request': request}
+            )
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = SubscriptionSerializer(
+            subscriptions,
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+
+
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
@@ -184,17 +212,12 @@ class SubscriptionViewSet(mixins.ListModelMixin,
 
     def destroy(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        subscription_id = kwargs.get('pk')
-        subscription = get_object_or_404(
-            Subscription,
-            pk=subscription_id,
-            subscriber=user_obj
-        )
-
-        if subscription:
-            subscription.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
+        del_count, _ = Subscription.objects.filter(
+            user=user_obj,
+            subscriber=request.user
+        ).delete()
+        if not del_count:
             raise serializers.ValidationError(
                 'Вы не были подписаны на данного автора.'
             )
+        return Response(status=status.HTTP_204_NO_CONTENT)
