@@ -29,7 +29,7 @@ class UserActionViewSet(UserViewSet):
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
 
-    @action(['POST'],
+    @action(['POST', 'DELETE'],
             detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
