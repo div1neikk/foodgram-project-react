@@ -106,7 +106,6 @@ class UserActionViewSet(UserViewSet):
         return Response(serializer.data)
 
 
-
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Ingredient.objects.all()
