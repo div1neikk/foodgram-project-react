@@ -169,12 +169,4 @@ class SubscriptionViewSet(mixins.ListModelMixin,
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Subscription.objects.filter(subscriber=user)
-        limit = self.request.query_params.get('limit', False)
-        if limit:
-            queryset = queryset[:int(limit)]
-        return queryset
-
-    def get_serializer_context(self):
-        context = self.request.query_params
-        return context
+        return user.subscriber.all()
