@@ -184,12 +184,17 @@ class SubscriptionViewSet(mixins.ListModelMixin,
 
     def destroy(self, request, *args, **kwargs):
         user_obj = self.get_object()
-        del_count, _ = Subscription.objects.filter(
-            user=user_obj,
-            subscriber=request.user
-        ).delete()
-        if not del_count:
+        subscription_id = kwargs.get('pk')
+        subscription = get_object_or_404(
+            Subscription,
+            pk=subscription_id,
+            subscriber=user_obj
+        )
+
+        if subscription:
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
             raise serializers.ValidationError(
                 'Вы не были подписаны на данного автора.'
             )
-        return Response(status=status.HTTP_204_NO_CONTENT)
