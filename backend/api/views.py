@@ -29,43 +29,50 @@ class UserActionViewSet(UserViewSet):
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
 
-    @action(['POST', 'DELETE'],
+    @action(['POST'],
             detail=True, serializer_class=SubscriptionSerializer)
     def subscribe(self, request, *args, **kwargs):
         user_obj = self.get_object()
+
         if request.method == 'POST':
             if request.user == user_obj:
-                return Response("Нельзя подписываться на самого себя",
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    "Нельзя подписываться на самого себя",
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-            sub_exist = Subscription.objects.filter(
-                user=user_obj, subscriber=request.user
-            ).exists()
-
-            if sub_exist:
-                return Response('Вы уже подписаны!',
-                                status=status.HTTP_400_BAD_REQUEST)
-
-            subscription = Subscription.objects.create(
+            subscription, created = Subscription.objects.get_or_create(
                 user=user_obj,
                 subscriber=request.user
             )
+
+            if not created:
+                return Response(
+                    'Вы уже подписаны!',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             serializer = SubscriptionSerializer(
-                subscription, context={'request': request}
+                subscription,
+                context={'request': request}
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        if request.method == 'DELETE':
-            try:
-                subscription = Subscription.objects.get(
-                    user=user_obj,
-                    subscriber=request.user
-                )
-                subscription.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Subscription.DoesNotExist:
-                return Response("Вы не подписаны на этого пользователя",
-                                status=status.HTTP_400_BAD_REQUEST)
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, *args, **kwargs):
+        user_obj = self.get_object()
+        del_count, _ = Subscription.objects.filter(
+            user=user_obj,
+            subscriber=request.user
+        ).delete()
+
+        if del_count:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                "Вы не подписаны на этого пользователя",
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -169,4 +176,4 @@ class SubscriptionViewSet(mixins.ListModelMixin,
 
     def get_queryset(self):
         user = self.request.user
-        return user.subscriber.all()
+        return Subscription.objects.filter(subscriber=user)

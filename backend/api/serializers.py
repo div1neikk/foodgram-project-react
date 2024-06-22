@@ -61,19 +61,19 @@ class RecipeSubscribeSerializer(serializers.ModelSerializer):
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        source='subscriber.username',
+        source='user.username',
         read_only=True
     )
     email = serializers.EmailField(
-        source='subscriber.email',
+        source='user.email',
         read_only=True
     )
     first_name = serializers.CharField(
-        source='subscriber.first_name',
+        source='user.first_name',
         read_only=True
     )
     last_name = serializers.CharField(
-        source='subscriber.last_name',
+        source='user.last_name',
         read_only=True
     )
     recipes = serializers.SerializerMethodField()
@@ -95,7 +95,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes = Recipe.objects.all()
+        recipes = Recipe.objects.filter(author=obj.user)
         limit = request.query_params.get('recipes_limit')
         if limit:
             recipes = recipes[:int(limit)]
@@ -108,7 +108,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
         return Subscription.objects.filter(
-            subscriber=user
+            subscriber=user,
+            user=obj.user
         ).exists()
 
 
