@@ -66,20 +66,18 @@ class UserActionViewSet(UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
-    def delete_subscribe(self, request, *args, **kwargs):
-        user_obj = self.get_object()
+    def destroy(self, request, *args, **kwargs):
+        user = get_object_or_404(User, username=self.request.user.username)
+        id_user = self.kwargs.get('pk')
+        user_unfollow = get_object_or_404(User, pk=id_user)
         del_count, _ = Subscription.objects.filter(
-            user=user_obj,
-            subscriber=request.user
+            user=user_unfollow, subscriber=user
         ).delete()
-
-        if del_count:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response(
-                "Вы не подписаны на этого пользователя",
-                status=status.HTTP_400_BAD_REQUEST
+        if not del_count:
+            raise serializers.ValidationError(
+                'Вы не были подписаны на данного автора.'
             )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -184,16 +182,3 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         user = self.request.user
         return Subscription.objects.filter(subscriber=user)
-
-    def destroy(self, request, *args, **kwargs):
-        user = get_object_or_404(User, username=self.request.user.username)
-        id_user = self.kwargs.get('pk')
-        user_unfollow = get_object_or_404(User, pk=id_user)
-        del_count, _ = Subscription.objects.filter(
-            user=user_unfollow, following_user=user
-        ).delete()
-        if not del_count:
-            raise serializers.ValidationError(
-                'Вы не были подписаны на данного автора.'
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
