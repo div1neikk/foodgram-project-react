@@ -181,3 +181,15 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         user = self.request.user
         return Subscription.objects.filter(subscriber=user)
+
+    def destroy(self, request, *args, **kwargs):
+        user_obj = self.get_object()
+        del_count, _ = Subscription.objects.filter(
+            user=user_obj,
+            subscriber=request.user
+        ).delete()
+        if not del_count:
+            raise serializers.ValidationError(
+                'Вы не были подписаны на данного автора.'
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
