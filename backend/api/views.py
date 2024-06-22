@@ -66,12 +66,11 @@ class UserActionViewSet(UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
-    def destroy(self, request, *args, **kwargs):
-        user = get_object_or_404(User, username=self.request.user.username)
-        id_user = self.kwargs.get('pk')
-        user_unfollow = get_object_or_404(User, pk=id_user)
+    def delete_subscribe(self, request, *args, **kwargs):
+        user_obj = self.get_object()
         del_count, _ = Subscription.objects.filter(
-            user=user_unfollow, subscriber=user
+            user=user_obj,
+            subscriber=request.user
         ).delete()
         if not del_count:
             raise serializers.ValidationError(
