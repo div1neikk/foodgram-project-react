@@ -4,7 +4,14 @@ from django_filters import rest_framework as filters
 from djoser.views import UserViewSet
 from recipes.models import (Favorite, Ingredient, Recipe,
                             ShoppingCart, Tag)
-from rest_framework import exceptions, mixins, permissions, status, viewsets
+from rest_framework import (
+    exceptions,
+    mixins,
+    permissions,
+    status,
+    viewsets,
+    serializers
+)
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
@@ -179,17 +186,14 @@ class SubscriptionViewSet(mixins.ListModelMixin,
         return Subscription.objects.filter(subscriber=user)
 
     def destroy(self, request, *args, **kwargs):
-        user = request.user
-        subscription = Subscription.objects.filter(
-            subscriber=user,
-            user__id=kwargs['pk']
-        ).first()
-
-        if subscription:
-            subscription.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response(
-                "Вы не подписаны на этого пользователя",
-                status=status.HTTP_400_BAD_REQUEST
+        user = get_object_or_404(User, username=self.request.user.username)
+        id_user = self.kwargs.get('pk')
+        user_unfollow = get_object_or_404(User, pk=id_user)
+        del_count, _ = Subscription.objects.filter(
+            user=user_unfollow, following_user=user
+        ).delete()
+        if not del_count:
+            raise serializers.ValidationError(
+                'Вы не были подписаны на данного автора.'
             )
+        return Response(status=status.HTTP_204_NO_CONTENT)
