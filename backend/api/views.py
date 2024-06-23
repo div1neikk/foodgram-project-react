@@ -195,4 +195,3 @@ class SubscriptionViewSet(mixins.ListModelMixin,
                 'Вы не были подписаны на данного автора.'
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
-
