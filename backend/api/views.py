@@ -10,7 +10,8 @@ from rest_framework import (
     permissions,
     status,
     viewsets,
-    serializers
+    serializers,
+    generics
 )
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
@@ -173,7 +174,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 class SubscriptionViewSet(mixins.ListModelMixin,
                           mixins.CreateModelMixin,
-                          mixins.DestroyModelMixin,
+                          generics.DestroyAPIView,
                           viewsets.GenericViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -194,3 +195,4 @@ class SubscriptionViewSet(mixins.ListModelMixin,
                 'Вы не были подписаны на данного автора.'
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
