@@ -3,7 +3,7 @@
 
 # 158.160.15.7
 
-domen: https://foodgram-divine.hopto.org/signin
+domain: https://foodgram-divine.hopto.org/signin
 
 test@yandex.ru
 # username: testrpg
